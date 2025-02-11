@@ -1,0 +1,8 @@
+name,value
+Average Inter Arrival Time,3.0
+Average Service Time,2.4545454545454546
+Average Turn Around Time (Ws),3.6363636363636362
+Average Wait Time (Wq),1.1818181818181819
+Length of system (Ls),1.1111111111111112
+Length of queue (Lq),0.37142857142857144
+Server Utilization,0.75
