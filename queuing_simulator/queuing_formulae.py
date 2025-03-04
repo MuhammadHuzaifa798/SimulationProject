@@ -139,23 +139,23 @@ def calculate_averages_by_formula(num_of_servers, dist_info: DistInfo):
     return [
         {
             "name": "Average Turn Around Time (Ws)",
-            "value": avg_system_waiting_time,
+            "value": abs(avg_system_waiting_time),
         },
         {
             "name": "Average Wait Time (Wq)",
-            "value": avg_queue_waiting_time,
+            "value": abs(avg_queue_waiting_time),
         },
         {
             "name": "Length of system (Ls)",
-            "value": avg_system_length,
+            "value": abs(avg_system_length),
         },
         {
             "name": "Length of queue (Lq)",
-            "value": avg_queue_length,
+            "value": abs(avg_queue_length),
         },
         {
             "name": "Server Utilization",
-            "value": server_utilization,
+            "value": abs(server_utilization),
         },
     ]
 
