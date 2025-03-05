@@ -20,7 +20,8 @@ class Simulator:
         is_priority_based,
     ) -> None:
         self.num_of_servers = num_of_servers
-        self.servers: List[Server] = [Server() for _ in range(self.num_of_servers)]
+        self.servers = [Server(server_id=i) for i in range(num_of_servers)]  # Assign IDs
+        print("yahahahhhaa")
         self.dist_info = dist_info
         self.is_priority_based = is_priority_based
         self.num_of_customers_arrived = 0
@@ -61,7 +62,7 @@ class Simulator:
                     self.df_avg_arrival_time_lookup,
                 )
             )
-            print(customer_idx)
+            # print(custosmer_idx)
             arrival_time = (
                 0
                 if customer_idx == 0
@@ -115,53 +116,37 @@ class Simulator:
         while self.should_continue:
             self.enqueue_customers()
 
+            # Assign customers to idle servers
             for server in self.servers:
-                if not server.is_idle and server.current_customer.is_finished:
-                    server.terminate_customer_service(self.time_elapsed)
+                if self.queue and server.is_idle:
+                    customer = self.pop_next_customer()
+                    customer.server_id = server.id
+                    server.start_customer_service(customer, self.time_elapsed)
 
             if not self.should_continue:
                 break
 
-            if not self.queue and self.num_of_customers_arrived < self.num_of_customers:
-                self.increase_time(self.time_next_customer_arrives - self.time_elapsed)
-                continue
-
-            for server in self.servers:
-                if self.queue and server.is_idle:
-                    server.start_customer_service(
-                        self.pop_next_customer(), self.time_elapsed
-                    )
-
-            for server in self.servers:
-                if (
-                    self.queue
-                    and self.next_customer.priority < server.current_customer.priority
-                ):
-                    self.queue.append(server.current_customer)
-                    server.terminate_customer_service(self.time_elapsed)
-                    server.start_customer_service(
-                        self.pop_next_customer(), self.time_elapsed
-                    )
-
+            # Calculate time until next event
+            time_options = []
             if self.num_of_customers_arrived < self.num_of_customers:
-                allocated_time = min(
-                    self.time_next_customer_arrives - self.time_elapsed,
-                    *[
-                        server.current_customer.remaining_time
-                        for server in self.servers
-                        if server.current_customer
-                    ],
-                )
-            else:
-                allocated_time = min(
-                    server.current_customer.remaining_time
-                    for server in self.servers
-                    if server.current_customer
-                )
+                time_options.append(self.time_next_customer_arrives - self.time_elapsed)
+            
+            server_times = []
+            for server in self.servers:
+                if server.current_customer:
+                    server_times.append(server.current_customer.remaining_time)
+            
+            allocated_time = min(time_options + server_times) if (time_options + server_times) else 0
 
+            # Progress time and handle completions
             self.increase_time(allocated_time)
             for server in self.servers:
-                server.allocate_customer_time(allocated_time)
+                if server.current_customer:
+                    server.allocate_customer_time(allocated_time)
+                    # NEW: Check for completion after time allocation
+                    if server.current_customer.is_finished:
+                        server.terminate_customer_service(self.time_elapsed)  # Release server
+
             for customer in self.queue:
                 customer.wait(allocated_time)
 
@@ -192,6 +177,7 @@ class Simulator:
                     "arrival_time": customer.arrival_time,
                     "service_time": customer.service_time,
                     "priority": customer.priority,
+                    "server_id": customer.server_id,
                     "start_time": customer.start_time,
                     "end_time": customer.end_time,
                     "wait_time": customer.wait_time,
@@ -221,36 +207,44 @@ class Simulator:
         )
 
     def calculate_averages(self):
-        return [
-            {
-                "name": "Average Inter Arrival Time",
-                "value": self.df_simulation_table.inter_arrival_time.mean(),
-            },
-            {
-                "name": "Average Service Time",
-                "value": self.df_simulation_table.service_time.mean(),
-            },
-            {
-                "name": "Average Turn Around Time (Ws)",
-                "value": self.df_simulation_table.turn_around_time.mean(),
-            },
-            {
-                "name": "Average Wait Time (Wq)",
-                "value": self.df_simulation_table.wait_time.mean(),
-            },
-            {
-                "name": "Length of system (Ls)",
-                "value": self.df_simulation_table.turn_around_time.sum()
-                / self.df_simulation_table.iloc[-1].end_time,
-            },
-            {
-                "name": "Length of queue (Lq)",
-                "value": self.df_simulation_table.wait_time.sum()
-                / self.df_simulation_table.iloc[-1].start_time,
-            },
-            {
-                "name": "Server Utilization",
-                "value": self.df_simulation_table.service_time.sum()
-                / (self.num_of_servers * max(self.df_simulation_table.end_time)),
-            },
-        ]
+        df = self.df_simulation_table
+        max_end_time = df['end_time'].max() if not df.empty else 0
+        averages = []
+
+        # System-wide metrics
+        system_metrics = {
+            'Average Inter Arrival Time': df['inter_arrival_time'].mean(),
+            'Average Wait Time (Wq)': df['wait_time'].mean(),
+            'Average Turn Around Time (Ws)': df['turn_around_time'].mean(),
+            'Average Response Time': df['response_time'].mean(),
+            'Length of system (Ls)': df['turn_around_time'].sum() / max_end_time if max_end_time > 0 else 0,
+            'Length of queue (Lq)': df['wait_time'].sum() / (df['start_time'].max() if df['start_time'].max() > 0 else 1)
+        }
+        
+        # Add system metrics
+        for name, value in system_metrics.items():
+            averages.append({"name": name, "value": value})
+
+        # Server-specific metrics
+        for server in self.servers:
+            # Calculate from Gantt chart data
+            server_tasks = server.gantt_chart_data
+            busy_time = sum(task['end'] - task['start'] for task in server_tasks)
+            num_customers = len(server_tasks)
+            
+            server_metrics = {
+                'Utilization': busy_time / max_end_time if max_end_time > 0 else 0,
+                'Customers Served': num_customers,
+                'Throughput (cust/time unit)': num_customers / max_end_time if max_end_time > 0 else 0,
+                'Avg Service Time': busy_time / num_customers if num_customers > 0 else 0,
+                'Total Busy Time': busy_time
+            }
+            
+            # Add server-specific metrics
+            for metric_name, value in server_metrics.items():
+                averages.append({
+                    "name": f"Server {server.id+1} - {metric_name}",
+                    "value": value
+                })
+
+        return averages

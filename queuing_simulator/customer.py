@@ -11,6 +11,7 @@ class Customer:
         self.wait_time: int = 0
         self.start_time = None
         self.end_time = None
+        self.server_id = None
 
     @property
     def turn_around_time(self) -> int:

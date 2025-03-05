@@ -272,6 +272,7 @@ with st.form("Form1", clear_on_submit=True):
 if st.session_state.clicked:
     sim = Simulator(num_of_servers, dist_info, is_priority)
     sim.run()
+    print("Runned")
 
     for _ in range(4):
         st.text("")
@@ -376,13 +377,56 @@ if st.session_state.clicked:
     # chart_html = css
 
     with st.expander("Show performance measures"):
-        averages_points = ""
-        for index, item in enumerate(sim.calculate_averages()):
-            if index < 4:
-                averages_points += f"* {item['name']} = {round(item['value'],3)} mins\n"
+        # Separate system metrics and server metrics
+        all_metrics = sim.calculate_averages()
+        system_metrics = []
+        server_metrics = {}
+        
+        # Categorize metrics
+        for item in all_metrics:
+            if "Server" in item['name']:
+                server_id = item['name'].split(" - ")[0]
+                metric_name = item['name'].split(" - ")[1]
+                if server_id not in server_metrics:
+                    server_metrics[server_id] = []
+                server_metrics[server_id].append((metric_name, item['value']))
             else:
-                averages_points += f"* {item['name']} = {round(item['value'],3)}\n"
-        st.markdown(averages_points)
+                system_metrics.append(item)
+
+        # Display system metrics
+        st.subheader("System-wide Metrics")
+        sys_col1, sys_col2 = st.columns(2)
+        with sys_col1:
+            for metric in system_metrics[:3]:
+                st.metric(
+                    label=metric['name'],
+                    value=f"{round(metric['value'], 3)} {time_unit}"
+                    if "Time" in metric['name'] else round(metric['value'], 3)
+                )
+        with sys_col2:
+            for metric in system_metrics[3:]:
+                st.metric(
+                    label=metric['name'],
+                    value=round(metric['value'], 3)
+                )
+
+        # Display server-specific metrics
+        st.markdown("---")
+        st.subheader("Server-specific Metrics")
+        
+        # Create columns for servers
+        server_columns = st.columns(num_of_servers)
+        
+        for idx, (server_id, metrics) in enumerate(server_metrics.items()):
+            with server_columns[idx % num_of_servers]:
+                st.markdown(f"**{server_id}**")
+                for metric_name, value in metrics:
+                    st.metric(
+                        label=metric_name,
+                        value=f"{round(value, 3)} {time_unit}"
+                        if "Time" in metric_name else round(value, 3)
+                    )
+
 
     # df = pd.read_csv("prev_averages.csv")
     # avgs = sim.calculate_averages()

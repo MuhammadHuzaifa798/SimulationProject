@@ -3,7 +3,9 @@ from queuing_simulator.customer import Customer
 
 
 class Server:
-    def __init__(self) -> None:
+    def __init__(self,server_id) -> None:
+        print("----------Setting up server ----------",server_id)
+        self.id = server_id
         self.current_customer: Customer | None = None
         self.gantt_chart_data = []
         self.start_time = None
