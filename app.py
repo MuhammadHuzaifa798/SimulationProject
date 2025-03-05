@@ -376,13 +376,16 @@ if st.session_state.clicked:
     # Reset chart_html for the next iteration
     # chart_html = css
 
+    # In the performance measures section (replace the existing expander code)
+    # In the performance measures section
     with st.expander("Show performance measures"):
-        # Separate system metrics and server metrics
         all_metrics = sim.calculate_averages()
+        
+        # Separate metrics into categories
         system_metrics = []
         server_metrics = {}
-        
-        # Categorize metrics
+        priority_metrics = {}
+
         for item in all_metrics:
             if "Server" in item['name']:
                 server_id = item['name'].split(" - ")[0]
@@ -390,6 +393,12 @@ if st.session_state.clicked:
                 if server_id not in server_metrics:
                     server_metrics[server_id] = []
                 server_metrics[server_id].append((metric_name, item['value']))
+            elif "Priority" in item['name']:
+                priority_level = item['name'].split(" ")[1]
+                metric_name = " ".join(item['name'].split(" ")[2:])
+                if priority_level not in priority_metrics:
+                    priority_metrics[priority_level] = []
+                priority_metrics[priority_level].append((metric_name, item['value']))
             else:
                 system_metrics.append(item)
 
@@ -398,34 +407,44 @@ if st.session_state.clicked:
         sys_col1, sys_col2 = st.columns(2)
         with sys_col1:
             for metric in system_metrics[:3]:
-                st.metric(
-                    label=metric['name'],
-                    value=f"{round(metric['value'], 3)} {time_unit}"
-                    if "Time" in metric['name'] else round(metric['value'], 3)
-                )
+                st.metric(label=metric['name'], 
+                        value=f"{round(metric['value'], 3)} {time_unit}" if "Time" in metric['name'] else round(metric['value'], 3))
         with sys_col2:
             for metric in system_metrics[3:]:
-                st.metric(
-                    label=metric['name'],
-                    value=round(metric['value'], 3)
-                )
+                st.metric(label=metric['name'], value=round(metric['value'], 3))
 
-        # Display server-specific metrics
+        # Always show server metrics
         st.markdown("---")
-        st.subheader("Server-specific Metrics")
-        
-        # Create columns for servers
+        st.subheader("Server Utilization Metrics")
         server_columns = st.columns(num_of_servers)
-        
         for idx, (server_id, metrics) in enumerate(server_metrics.items()):
             with server_columns[idx % num_of_servers]:
                 st.markdown(f"**{server_id}**")
                 for metric_name, value in metrics:
-                    st.metric(
-                        label=metric_name,
-                        value=f"{round(value, 3)} {time_unit}"
-                        if "Time" in metric_name else round(value, 3)
-                    )
+                    display_value = (f"{round(value, 3)} {time_unit}" 
+                                if "Time" in metric_name 
+                                else f"{round(value * 100, 1)}%" if "Utilization" in metric_name 
+                                else round(value, 3))
+                    st.metric(label=metric_name, value=display_value)
+
+        # Show priority metrics if enabled
+        if is_priority and priority_metrics:
+            st.markdown("---")
+            st.subheader("Priority-wise Customer Metrics")
+            priorities = sorted(priority_metrics.keys(), key=lambda x: int(x))
+            priority_cols = st.columns(len(priorities))
+            
+            for idx, priority in enumerate(priorities):
+                with priority_cols[idx]:
+                    st.markdown(f"**Priority {priority}**")
+                    for metric_name, value in priority_metrics[priority]:
+                        st.metric(
+                            label=metric_name,
+                            value=f"{round(value, 3)} {time_unit}" 
+                            if "Time" in metric_name 
+                            else round(value, 3)
+                        )
+
 
 
     # df = pd.read_csv("prev_averages.csv")

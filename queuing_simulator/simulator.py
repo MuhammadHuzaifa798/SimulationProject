@@ -246,5 +246,28 @@ class Simulator:
                     "name": f"Server {server.id+1} - {metric_name}",
                     "value": value
                 })
+        
+
+        # Add priority-wise metrics if priority-based
+        if self.is_priority_based:
+            # Get unique priorities
+            priorities = self.df_simulation_table['priority'].unique()
+            
+            for priority in priorities:
+                priority_df = self.df_simulation_table[self.df_simulation_table['priority'] == priority]
+                
+                priority_metrics = {
+                    'Average Wait Time': priority_df['wait_time'].mean(),
+                    'Average Turn Around Time': priority_df['turn_around_time'].mean(),
+                    'Average Response Time': priority_df['response_time'].mean(),
+                    'Number of Customers': len(priority_df)
+                }
+                
+                for metric_name, value in priority_metrics.items():
+                    averages.append({
+                        "name": f"Priority {priority} - {metric_name}",
+                        "value": value
+                    })
+
 
         return averages
