@@ -272,7 +272,6 @@ with st.form("Form1", clear_on_submit=True):
 if st.session_state.clicked:
     sim = Simulator(num_of_servers, dist_info, is_priority)
     sim.run()
-    print("Runned")
 
     for _ in range(4):
         st.text("")

@@ -21,7 +21,6 @@ class Simulator:
     ) -> None:
         self.num_of_servers = num_of_servers
         self.servers = [Server(server_id=i) for i in range(num_of_servers)]  # Assign IDs
-        print("yahahahhhaa")
         self.dist_info = dist_info
         self.is_priority_based = is_priority_based
         self.num_of_customers_arrived = 0
