@@ -15,7 +15,7 @@ import pandas as pd
 page_bg_img = """
 <style>
 [data-testid="stAppViewContainer"] {
-    background-image: url("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR3WcLOC3z_ZPtFt22pH483sGMqvp5XMAvxbQ&s");
+    # background-image: url("https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR3WcLOC3z_ZPtFt22pH483sGMqvp5XMAvxbQ&s");
     background-size: auto; /* Keeps the original dimensions */
     background-repeat: no-repeat; /* Prevents repetition */
     background-position: top center; /* Positions the image at the top center */
